@@ -24,8 +24,8 @@ def mask_patch(*args, **kwargs):
     # 2. 生成掩码 (提示：使用 torch.full, torch.triu 或 masked_fill)
     # [YOUR CODE HERE]
     bsz, seq_len = input_shape
-    mask = torch.full(size=(seq_len, seq_len), fill_value=0.0, dtype=dtype, device=device)
-    mask = mask.masked_fill(torch.triu(torch.ones_like(mask), diagonal=1).bool(), value=-torch.inf)
+    mask = torch.full(size=(seq_len, seq_len), fill_value=float("-inf"), dtype=dtype, device=device)
+    mask = torch.triu(mask, diagonal=1)
     mask = mask.view(1, 1, seq_len, seq_len).expand(bsz, -1, -1, -1)
     return mask # 确保返回的是 4D 张量
 
@@ -52,6 +52,8 @@ class Qwen3ONNXWrapper(torch.nn.Module):
 
 # ================= 主程序 =================
 model_path = "./Qwen3-1.7B"
+
+os.makedirs("./export", exist_ok=True)
 output_file = "./export/qwen3_fp32.onnx"
 
 print(f"--- Loading Model ---")
@@ -100,7 +102,7 @@ with torch.no_grad():
         
         # [YOUR CODE HERE] 有一个关键参数用于关闭新版 Dynamo 导出器，请填入
         # ____________ = ____________ 
-        dynamo = False
+        dynamo=False
     )
 
 print(f"✅ Export Success!")
