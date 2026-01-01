@@ -17,13 +17,16 @@ def mask_patch(*args, **kwargs):
     bsz, seq_len = 1, 32 # 默认值
     
     # [YOUR CODE HERE] 解析 input_shape
-    
+    input_shape = kwargs.get("input_shape", torch.Size([bsz, seq_len]))
     dtype = kwargs.get("dtype", torch.float32)
     device = kwargs.get("device", torch.device("cpu"))
 
     # 2. 生成掩码 (提示：使用 torch.full, torch.triu 或 masked_fill)
     # [YOUR CODE HERE]
-    
+    bsz, seq_len = input_shape
+    mask = torch.full(size=(seq_len, seq_len), fill_value=0.0, dtype=dtype, device=device)
+    mask = mask.masked_fill(torch.triu(torch.ones_like(mask), diagonal=1).bool(), value=-torch.inf)
+    mask = mask.view(1, 1, seq_len, seq_len).expand(bsz, -1, -1, -1)
     return mask # 确保返回的是 4D 张量
 
 # 应用补丁
@@ -44,12 +47,12 @@ class Qwen3ONNXWrapper(torch.nn.Module):
         # 1. 调用 self.model
         # 2. 关键参数：必须设置 use_cache=False
         # 3. 返回 outputs.logits
-        pass 
-
+        outputs = self.model(input_ids, attention_mask, use_cache=False)
+        return outputs.logits
 
 # ================= 主程序 =================
 model_path = "./Qwen3-1.7B"
-output_file = "qwen3_fp32.onnx"
+output_file = "./export/qwen3_fp32.onnx"
 
 print(f"--- Loading Model ---")
 try:
@@ -87,7 +90,9 @@ with torch.no_grad():
         # [YOUR CODE HERE] 配置 dynamic_axes
         # 要求：允许 input_ids, attention_mask, logits 的 batch(dim 0) 和 seq(dim 1) 维度变化
         dynamic_axes={
-            
+            "input_ids": {0: "input_ids_batch", 1: "inputs_ids_seq"},
+            "attention_mask": {0: "attention_mask_batch", 1: "attention_mask_seq"},
+            "logits": {0: "logits_batch", 1: "logits_seq"},
         },
         
         opset_version=14,
@@ -95,6 +100,7 @@ with torch.no_grad():
         
         # [YOUR CODE HERE] 有一个关键参数用于关闭新版 Dynamo 导出器，请填入
         # ____________ = ____________ 
+        dynamo = False
     )
 
 print(f"✅ Export Success!")
