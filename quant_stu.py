@@ -28,11 +28,24 @@ class SmartCalibrationDataReader(CalibrationDataReader):
         # 2. 将数据转换为 int64 类型
         # 3. 返回一个字典，键名必须与 self.input_names 匹配
         #    (提示：检查 input_ids 和 attention_mask 是否都在 input_names 里)
-        return {} 
+        
+        inputs = self.tokenizer(text, return_tensors="np")
+        
+        quantize_data = {}
+        for name in inputs:
+            inputs[name] = inputs[name].astype(np.int64)
+            if name in self.input_names:
+                quantize_data[name] = inputs[name]
+        
+        print(self.input_names)
+        print(inputs)
+        print(quantize_data)
+        return quantize_data
 
 # 主程序
-model_fp32 = "qwen3_fp32.onnx"
-model_int8 = "qwen3_int8.onnx"
+model_fp32 = "export/qwen3_fp32.onnx"
+os.makedirs(name="quant", exist_ok=True)
+model_int8 = "quant/qwen3_int8.onnx"
 
 if not os.path.exists(model_fp32):
     print("未找到 FP32 模型，请先完成任务一。")
@@ -55,7 +68,7 @@ quantize_static(
     weight_type=QuantType.QInt8,
     
     # [YOUR CODE HERE] 填入解决大模型存储限制的关键参数
-    
+    use_external_data_format=True
 )
 
 print(f"✅ Quantization Complete!")

@@ -3,7 +3,7 @@ import numpy as np
 from transformers import AutoTokenizer
 import os
 
-model_path = "qwen3_int8.onnx"
+model_path = "quant/qwen3_int8.onnx"
 tokenizer_path = "./Qwen3-1.7B"
 
 sess = ort.InferenceSession(model_path, providers=['CPUExecutionProvider'])
@@ -21,23 +21,36 @@ def generate(prompt, max_tokens=50):
     for _ in range(max_tokens):
         # [YOUR CODE HERE]
         # 1. 构造推理输入字典 ort_inputs
-        
+        ort_inputs = {
+            "input_ids": input_ids,
+            "attention_mask": np.ones_like(input_ids, dtype=np.int64)
+        }
+
         # 2. 执行推理 sess.run
         # outputs = ...
-        
+        outputs = sess.run(None, ort_inputs)
+
         # 3. 获取下一个 token 的 ID (提示：取 logits 的最后一个位置，做 argmax)
         # next_token = ...
-        
+        logits = outputs[0]
+        next_token_logits = logits[0, -1, :]  # shape: (vocab_size,)
+        next_token = np.argmax(next_token_logits)
+
         # 4. 结束条件判断 (EOS token)
         # if next_token == tokenizer.eos_token_id: break
-        
+        if next_token == tokenizer.eos_token_id:
+            break
+
         # 5. 打印当前生成的字
         word = tokenizer.decode([next_token])
         print(word, end="", flush=True)
         
         # 6. 更新 input_ids (将新 token 拼接到末尾)
         # input_ids = np.append(...)
-        pass # 删除此行
+        next_token_arr = np.array([[next_token]], dtype=np.int64)
+        input_ids = np.concatenate([input_ids, next_token_arr], axis=1)
+        
+        # pass # 删除此行
         
     print("\n")
 

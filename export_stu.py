@@ -14,15 +14,30 @@ def mask_patch(*args, **kwargs):
     # --- 在这里实现代码 ---
     
     # 1. 解析参数 (提示：优先检查 kwargs 中的 input_shape)
-    bsz, seq_len = 1, 32 # 默认值
-    
+    # bsz, seq_len = 1, 32 # 默认值
+    print(args)
+    print(kwargs)
     # [YOUR CODE HERE] 解析 input_shape
-    
+    if "input_shape" in kwargs:
+        print("input_shape in kwargs.")
+        bsz, seq_len = kwargs["input_shape"]
+    elif "attention_mask" in kwargs:
+        print("attention_mask in kwargs.")
+        bsz, seq_len = kwargs["attention_mask"].shape
+    else:
+        # Fallback: 如果没有 input_shape，尝试从 args 或其他地方获取，或者报错
+        # 为了导出安全，这里保留默认值，但实际导出时 key 应该都在
+        print("not in kwargs.")
+        bsz, seq_len = 1, 32
+
     dtype = kwargs.get("dtype", torch.float32)
     device = kwargs.get("device", torch.device("cpu"))
 
     # 2. 生成掩码 (提示：使用 torch.full, torch.triu 或 masked_fill)
     # [YOUR CODE HERE]
+    mask = torch.full((seq_len, seq_len), float('-inf'), dtype=dtype, device=device)
+    mask = torch.triu(mask, diagonal=1)
+    mask = mask.unsqueeze(0).unsqueeze(0).expand(bsz, 1, seq_len, seq_len)
     
     return mask # 确保返回的是 4D 张量
 
@@ -44,12 +59,17 @@ class Qwen3ONNXWrapper(torch.nn.Module):
         # 1. 调用 self.model
         # 2. 关键参数：必须设置 use_cache=False
         # 3. 返回 outputs.logits
-        pass 
-
+        outputs = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            use_cache=False
+        )
+        return outputs.logits
 
 # ================= 主程序 =================
 model_path = "./Qwen3-1.7B"
-output_file = "qwen3_fp32.onnx"
+os.makedirs(name="export", exist_ok=True)
+output_file = "export/qwen3_fp32.onnx"
 
 print(f"--- Loading Model ---")
 try:
@@ -87,7 +107,9 @@ with torch.no_grad():
         # [YOUR CODE HERE] 配置 dynamic_axes
         # 要求：允许 input_ids, attention_mask, logits 的 batch(dim 0) 和 seq(dim 1) 维度变化
         dynamic_axes={
-            
+            "input_ids": {0: "batch_size", 1: "sequence_length"},
+            "attention_mask": {0: "batch_size", 1: "sequence_length"},
+            "logits": {0: "batch_size", 1: "sequence_length"}
         },
         
         opset_version=14,
@@ -95,6 +117,9 @@ with torch.no_grad():
         
         # [YOUR CODE HERE] 有一个关键参数用于关闭新版 Dynamo 导出器，请填入
         # ____________ = ____________ 
+        # use_external_data_format=True
+        dynamo = False,
+        # export_params=True
     )
 
 print(f"✅ Export Success!")
