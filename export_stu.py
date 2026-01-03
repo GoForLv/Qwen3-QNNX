@@ -15,19 +15,14 @@ def mask_patch(*args, **kwargs):
     
     # 1. 解析参数 (提示：优先检查 kwargs 中的 input_shape)
     # bsz, seq_len = 1, 32 # 默认值
-    print(args)
-    print(kwargs)
     # [YOUR CODE HERE] 解析 input_shape
     if "input_shape" in kwargs:
-        print("input_shape in kwargs.")
         bsz, seq_len = kwargs["input_shape"]
     elif "attention_mask" in kwargs:
-        print("attention_mask in kwargs.")
         bsz, seq_len = kwargs["attention_mask"].shape
     else:
         # Fallback: 如果没有 input_shape，尝试从 args 或其他地方获取，或者报错
         # 为了导出安全，这里保留默认值，但实际导出时 key 应该都在
-        print("not in kwargs.")
         bsz, seq_len = 1, 32
 
     dtype = kwargs.get("dtype", torch.float32)
@@ -117,9 +112,7 @@ with torch.no_grad():
         
         # [YOUR CODE HERE] 有一个关键参数用于关闭新版 Dynamo 导出器，请填入
         # ____________ = ____________ 
-        # use_external_data_format=True
         dynamo = False,
-        # export_params=True
     )
 
 print(f"✅ Export Success!")

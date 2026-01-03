@@ -33,13 +33,9 @@ class SmartCalibrationDataReader(CalibrationDataReader):
         
         quantize_data = {}
         for name in inputs:
-            inputs[name] = inputs[name].astype(np.int64)
             if name in self.input_names:
-                quantize_data[name] = inputs[name]
-        
-        print(self.input_names)
-        print(inputs)
-        print(quantize_data)
+                quantize_data[name] = inputs[name].astype(np.int64)
+
         return quantize_data
 
 # 主程序
@@ -59,15 +55,24 @@ print("--- Starting Quantization ---")
 # ================= TODO 5: 执行静态量化 =================
 # 提示：由于模型大于 2GB，直接量化会报错 Protobuf parsing failed。
 # 你需要设置哪个参数来启用外部数据存储？
-quantize_static(
+# quantize_static(
+#     model_input=model_fp32,
+#     model_output=model_int8,
+#     calibration_data_reader=dr,
+#     quant_format=onnxruntime.quantization.QuantFormat.QDQ,
+#     activation_type=QuantType.QUInt8,
+#     weight_type=QuantType.QInt8,
+    
+#     # [YOUR CODE HERE] 填入解决大模型存储限制的关键参数
+#     use_external_data_format=True
+# )
+
+from onnxruntime.quantization import quantize_dynamic
+
+quantize_dynamic(
     model_input=model_fp32,
     model_output=model_int8,
-    calibration_data_reader=dr,
-    quant_format=onnxruntime.quantization.QuantFormat.QDQ,
-    activation_type=QuantType.QUInt8,
     weight_type=QuantType.QInt8,
-    
-    # [YOUR CODE HERE] 填入解决大模型存储限制的关键参数
     use_external_data_format=True
 )
 

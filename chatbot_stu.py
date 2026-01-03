@@ -3,6 +3,7 @@ import numpy as np
 from transformers import AutoTokenizer
 import os
 
+# model_path = "export/qwen3_fp32.onnx"
 model_path = "quant/qwen3_int8.onnx"
 tokenizer_path = "./Qwen3-1.7B"
 
@@ -48,7 +49,7 @@ def generate(prompt, max_tokens=50):
         # 6. 更新 input_ids (将新 token 拼接到末尾)
         # input_ids = np.append(...)
         next_token_arr = np.array([[next_token]], dtype=np.int64)
-        input_ids = np.concatenate([input_ids, next_token_arr], axis=1)
+        input_ids = np.append(input_ids, next_token_arr, axis=1)
         
         # pass # 删除此行
         
